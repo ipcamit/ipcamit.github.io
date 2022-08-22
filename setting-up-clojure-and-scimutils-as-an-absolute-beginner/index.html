@@ -4,28 +4,28 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Automatic Differentiation</title>
+    <title>Setting up Clojure and SCIMUtils as an absolute beginner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="/assets/built/screen.css?v=3136f4d608">
 
     <link rel="icon" href="/favicon.png" type="image/png" />
-    <link rel="canonical" href="https://ipcamit.github.io/automatic-differentiation/" />
+    <link rel="canonical" href="https://ipcamit.github.io/setting-up-clojure-and-scimutils-as-an-absolute-beginner/" />
     <meta name="referrer" content="no-referrer-when-downgrade" />
     
     <meta property="og:site_name" content="Poorly Written Notes" />
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="Automatic Differentiation" />
-    <meta property="og:description" content="This is a small presentation I gave in lab meeting, introducing principles of automatic differentiation. Among various AD frameworks, Autograd, Autodiff, and Enzyme were benchmarked over Stillinger-Weber potential of Si atoms. Stillinger-Weber was chosen as most benchmarks and frameworks focus on traditional linear algebra kind problems, where as I am" />
-    <meta property="og:url" content="https://ipcamit.github.io/automatic-differentiation/" />
-    <meta property="article:published_time" content="2022-03-04T05:53:21.000Z" />
-    <meta property="article:modified_time" content="2022-03-04T05:53:21.000Z" />
+    <meta property="og:title" content="Setting up Clojure and SCIMUtils as an absolute beginner" />
+    <meta property="og:description" content="Clojure setupSo recently I was starting up on Clojure for SCIMUtils library, which is an excellent port of original scimutils written in MIT-Scheme. Clojure version provides overall better documentation and tooling experience than the Scheme version. However Clojure is bit more eccentric for my taste and I was having hard" />
+    <meta property="og:url" content="https://ipcamit.github.io/setting-up-clojure-and-scimutils-as-an-absolute-beginner/" />
+    <meta property="article:published_time" content="2022-08-22T15:34:29.000Z" />
+    <meta property="article:modified_time" content="2022-08-22T15:34:29.000Z" />
     <meta property="article:publisher" content="https://www.facebook.com/ghost" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Automatic Differentiation" />
-    <meta name="twitter:description" content="This is a small presentation I gave in lab meeting, introducing principles of automatic differentiation. Among various AD frameworks, Autograd, Autodiff, and Enzyme were benchmarked over Stillinger-Weber potential of Si atoms. Stillinger-Weber was chosen as most benchmarks and frameworks focus on traditional linear algebra kind problems, where as I am" />
-    <meta name="twitter:url" content="https://ipcamit.github.io/automatic-differentiation/" />
+    <meta name="twitter:title" content="Setting up Clojure and SCIMUtils as an absolute beginner" />
+    <meta name="twitter:description" content="Clojure setupSo recently I was starting up on Clojure for SCIMUtils library, which is an excellent port of original scimutils written in MIT-Scheme. Clojure version provides overall better documentation and tooling experience than the Scheme version. However Clojure is bit more eccentric for my taste and I was having hard" />
+    <meta name="twitter:url" content="https://ipcamit.github.io/setting-up-clojure-and-scimutils-as-an-absolute-beginner/" />
     <meta name="twitter:label1" content="Written by" />
     <meta name="twitter:data1" content="Amit Gupta" />
     <meta name="twitter:site" content="@ghost" />
@@ -51,11 +51,11 @@
         "url": "https://ipcamit.github.io/author/amit/",
         "sameAs": []
     },
-    "headline": "Automatic Differentiation",
-    "url": "https://ipcamit.github.io/automatic-differentiation/",
-    "datePublished": "2022-03-04T05:53:21.000Z",
-    "dateModified": "2022-03-04T05:53:21.000Z",
-    "description": "This is a small presentation I gave in lab meeting, introducing principles of\nautomatic differentiation. Among various AD frameworks, Autograd, Autodiff, and\nEnzyme were benchmarked over Stillinger-Weber potential of Si atoms.\nStillinger-Weber was chosen as most benchmarks and frameworks focus on\ntraditional linear algebra kind problems, where as I am more interested on ML\napplications on more scientific problems. All the code would be uploaded in\ngithub soon. Presentation can be downloaded here",
+    "headline": "Setting up Clojure and SCIMUtils as an absolute beginner",
+    "url": "https://ipcamit.github.io/setting-up-clojure-and-scimutils-as-an-absolute-beginner/",
+    "datePublished": "2022-08-22T15:34:29.000Z",
+    "dateModified": "2022-08-22T15:34:29.000Z",
+    "description": "Clojure setup\nSo recently I was starting up on Clojure for SCIMUtils library, which is an\nexcellent port of original scimutils written in MIT-Scheme. Clojure version\nprovides overall better documentation and tooling experience than the Scheme\nversion.\n\nHowever Clojure is bit more eccentric for my taste and I was having hard time\ngetting started. Shout out to user pmonks [https://github.com/pmonks] from the\nDiscord Clojure chatroom Discljord for being patient and helpful enough to guide\nme though",
     "mainEntityOfPage": {
         "@type": "WebPage",
         "@id": "https://ipcamit.github.io/"
@@ -124,33 +124,74 @@
                 <span class="gh-article-meta">
                     By <a href="/author/amit/">Amit Gupta</a>
                     —
-                    <time datetime="2022-03-04">Mar 4, 2022</time>
+                    <time datetime="2022-08-22">Aug 22, 2022</time>
                 </span>
 
-            <h1 class="gh-article-title">Automatic Differentiation</h1>
+            <h1 class="gh-article-title">Setting up Clojure and SCIMUtils as an absolute beginner</h1>
 
 
         </header>
 
         <div class="gh-content gh-canvas">
-            <p>This is a small presentation I gave in lab meeting, introducing principles of automatic differentiation. Among various AD frameworks, Autograd, Autodiff, and Enzyme were benchmarked over Stillinger-Weber potential of Si atoms. Stillinger-Weber was chosen as most benchmarks and frameworks focus on traditional linear algebra kind problems, where as I am more interested on ML applications on more scientific problems. All the code would be uploaded in github soon. Presentation can be downloaded <a href="https://1drv.ms/b/s!Ave1F6LmCN-jg7l-XVDYJgHCQiQC2A">here</a>. Sources for figures and content are given in the end.</p><hr><!--kg-card-begin: html--><iframe src="https://onedrive.live.com/embed?cid=A3DF08E6A217B5F7&resid=A3DF08E6A217B5F7%2156574&authkey=AKK7axh_MMKMdDg&em=2" width="800" height="500" frameborder="0" scrolling="no"></iframe><!--kg-card-end: html-->
+            <h2 id="clojure-setup">Clojure setup</h2><p>So recently I was starting up on Clojure for SCIMUtils library, which is an excellent port of original scimutils written in MIT-Scheme. Clojure version provides overall better documentation and tooling experience than the Scheme version.</p><p>However Clojure is bit more <em>eccentric</em> for my taste and I was having hard time getting started. Shout out to user <a href="https://github.com/pmonks"><strong>pmonks</strong></a> from the Discord Clojure chatroom <code>Discljord</code> for being patient and helpful enough to guide me though its first steps. Following is the conversation with him. Most of it is replicated verbatim, except few changes in structure, and editing where required. Plus it is really really hard to get help on MIT-Scheme</p><h3 id="bit-of-background">Bit of background</h3><p>So the first thing that’s a bit odd is that you would normally use either <code>lein</code> or <code>clj</code>, but rarely both together. They’re basically competing build tools / environments.<br>Sort of - it’s supposed to be a more modern take on a Clojure build tool, and is published by Cognitect (the creators of Clojure), so has more “cachet”.  Whether it’s “better” than Leiningen or not at this point is a matter of debate. <code>clj</code> just wraps Clojure in <code>rlwrap</code> - they are otherwise identical. So yes, for interactive REPLs, you’d usually want <code>clj</code>.</p><h3 id="structure-of-clojure-project">Structure of Clojure project</h3><p>Anyway, one of the first things to understand about package management / libraries in Clojure (which is actually a limitation of the JVM) is that hot-loading libraries is a bit fraught. There are hacky ways to partially do it, but I would not recommend them unless you’re already fairly familiar  with how the JVM loads code. So what we have to do instead is declare our dependencies up front, then start a REPL (and if the dependencies change, generally speaking the best bet is to quit and restart the REPL).</p><p>For clj &amp; clojure, dependencies are expressed in a file that (by default) is called <code>deps.edn</code>. To declare a dependency on SICMUtils, the contents of that file would be</p><pre><code>{:deps {sicmutils/sicmutils {:mvn/version "0.22.0"}}}
+</code></pre><p>This is same as given on Clojars page clj column. Clojars “knows” about the clj/clojure tools, so they provide this as a handy copypasta.</p><p>Also the clj tool assumes source code is housed under a sub directory called <code>src</code>. So the directory structure should be:</p><pre><code>new_project/
+|
++- deps.edn
+|
++- src/
+    |
+    +- core.clj
+</code></pre><p>Though if your namespace is new-project.core, that should actually be:</p><pre><code>new_project/
+|
++- deps.edn
+|
++- src/
+    |
+    +- new_project/
+        |
+        +- core.clj
+
+</code></pre><p>The <code>core.clj</code> contains simple hello world program.</p><pre><code class="language-clojure">(ns new_project.core)
+
+(defn hello
+  []
+  (println "Hello World"))
+</code></pre><p>Once you have that file in an otherwise empty directory, if you start a clj / clojure REPL in that directory, you should see it download the library (first time only) then start a REPL where that library is available.</p><p>All downloaded packages are by default kept in a “per user” cache in ~/.m2.<br>That means that if you use the same dependency in multiple separate projects you’re not downloading the same libraries over and over again. This is standard practice across many/most JVM-hosted languages.<br>Clojure simply leverages the underlying JVM ecosystem.</p><h3 id="running-the-program">Running the Program</h3><p>To load code from a file you would normally require that file’s namespace, then use the vars it declares from your own namespace (user in the case of the REPL).<br>Now to load code from a file using require, there is a naming convention for that file’s name that you have to follow (since Clojure has a particular mapping from ns symbol to file-on-disk).</p><p>As an example, if your file declares a namespace called my.cool.namespace, the file would need to be called ./my/cool/namespace.clj (yes that’s a directory structure).</p><p>Oh and one JVM oddity to watch out for - if your namespace name includes hyphens anywhere (“-“), those would be replaced with an underscore (“_”) in the filename. This is another JVM oddity that Clojure has to workaround.</p><p>Once you have your core.clj named and located properly, to load and use it in the REPL, you’d just require the namespace e.g. in above case it will be</p><pre><code class="language-clojure">(require '[new_project.core as cr]).
+</code></pre><p>vars in that namespace are then available via the <code>cr</code> prefix. e.g. <code>(cr/hello)</code></p><p>Oh and one nice thing that Clojure can do for Clojure code, is that if your file changes you can reload it without exiting the REPL. To do that:</p><pre><code class="language-clojure">(require '[new_project.core as cr] :reload-all)
+</code></pre><p>So from inside your poject folder you should have final structure as:</p><pre><code>$ tree .
+.
+├── deps.edn
+└── src
+    └── new_project
+        └── core.clj
+
+2 directories, 2 files
+</code></pre><p>And the <code>clj</code> commandline looks like:</p><pre><code>$ clj                               
+Clojure 1.11.1
+user=&gt; (require '[new_project.core :as cr])
+nil
+user=&gt; (cr/hello)
+Hello World
+nil
+user=&gt; 
+</code></pre><p>Thats it! Now you can head to <a href="https://cljdoc.org/d/sicmutils/sicmutils/0.22.0/doc/basics/how-to-use-sicmutils">SCIMutils docs</a> and start doing what the page tells you to.</p>
         </div>
 
             <footer class="gh-article-footer gh-canvas">
                 <nav class="gh-navigation">
                     <div class="gh-navigation-previous">
+                            <a class="gh-navigation-link" href="/automatic-differentiation/">
+                                <span class="gh-navigation-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+</svg> Previous issue</span>
+                                <h4 class="gh-navigation-title">Automatic Differentiation</h4>
+                            </a>
                     </div>
 
                     <div class="gh-navigation-middle"></div>
 
                     <div class="gh-navigation-next">
-                            <a class="gh-navigation-link" href="/setting-up-clojure-and-scimutils-as-an-absolute-beginner/">
-                                <span class="gh-navigation-label">Next issue <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"></line>
-    <polyline points="12 5 19 12 12 19"></polyline>
-</svg></span>
-                                <h4 class="gh-navigation-title">Setting up Clojure and SCIMUtils as an absolute beginner</h4>
-                            </a>
                     </div>
                 </nav>
             </footer>
