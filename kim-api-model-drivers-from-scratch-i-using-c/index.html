@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KIM-API Model Drivers from scratch I: using C++</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/assets/built/screen.css?v=212e76eb03">
+
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="canonical" href="https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+    
+    <meta property="og:site_name" content="Poorly Written Notes" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="KIM-API Model Drivers from scratch I: using C++" />
+    <meta property="og:description" content="IntroductionThis is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: https://github.com/ipcamit/kim-api-tutorial .Have you ever wanted to create" />
+    <meta property="og:url" content="https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/" />
+    <meta property="article:published_time" content="2025-08-04T14:36:11.000Z" />
+    <meta property="article:modified_time" content="2025-08-04T14:36:11.000Z" />
+    <meta property="article:publisher" content="https://www.facebook.com/ghost" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="KIM-API Model Drivers from scratch I: using C++" />
+    <meta name="twitter:description" content="IntroductionThis is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: https://github.com/ipcamit/kim-api-tutorial .Have you ever wanted to create" />
+    <meta name="twitter:url" content="https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="Amit Gupta" />
+    <meta name="twitter:site" content="@ghost" />
+    
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Poorly Written Notes",
+        "url": "https://ipcamit.github.io/",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://ipcamit.github.io/content/images/2022/03/benzene-svgrepo-com.svg",
+            "width": 60,
+            "height": 60
+        }
+    },
+    "author": {
+        "@type": "Person",
+        "name": "Amit Gupta",
+        "url": "https://ipcamit.github.io/author/amit/",
+        "sameAs": []
+    },
+    "headline": "KIM-API Model Drivers from scratch I: using C++",
+    "url": "https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/",
+    "datePublished": "2025-08-04T14:36:11.000Z",
+    "dateModified": "2025-08-04T14:36:11.000Z",
+    "description": "Introduction\n&gt; This is supposed to be a two/three part series on how to write OpenKIM model\ndriver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of\ncodes/slides etc can be accessed here: \nhttps://github.com/ipcamit/kim-api-tutorial .\nHave you ever wanted to create portable interatomic potentials that work\nseamlessly across different molecular dynamics simulators? The Knowledgebase of\nInteratomic Models (KIM) API makes this possible, but diving into model driver\ndevelopmen",
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://ipcamit.github.io/"
+    }
+}
+    </script>
+
+    <meta name="generator" content="Ghost 4.35" />
+    <link rel="alternate" type="application/rss+xml" title="Poorly Written Notes" href="https://ipcamit.github.io/rss/" />
+    
+    <script defer src="/public/cards.min.js?v=212e76eb03"></script>
+    <link rel="stylesheet" type="text/css" href="/public/cards.min.css?v=212e76eb03">
+    <!DOCTYPE html>
+<!-- KaTeX requires the use of the HTML5 doctype. Without it, KaTeX may not render properly -->
+<html>
+  <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.css" integrity="sha384-MlJdn/WNKDGXveldHDdyRP1R4CTHr3FeuDNfhsLPYrq2t0UBkUdK2jyTnXPEK1NQ" crossorigin="anonymous">
+
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/katex.min.js" integrity="sha384-VQ8d8WVFw0yHhCk5E8I86oOhv48xLpnDZx5T9GogA/Y84DcCKWXDmSDfn13bzFZY" crossorigin="anonymous"></script>
+
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.15.2/dist/contrib/auto-render.min.js" integrity="sha384-+XBljXPPiv+OzfbB3cVmLHf4hdUFHlWNZN5spNQ7rmHTXpd7WvJum6fIACpNNfIR" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
+  </head>
+ 
+</html><style>:root {--ghost-accent-color: #3465a4;}</style>
+</head>
+
+<body class="post-template is-head-b--a_n">
+    <div class="gh-site">
+        <header id="gh-head" class="gh-head gh-outer">
+            <div class="gh-head-inner gh-inner">
+                <div class="gh-head-brand">
+                    <a class="gh-head-logo" href="https://ipcamit.github.io">
+                            <img src="https://ipcamit.github.io/content/images/2022/03/benzene-svgrepo-com.svg" alt="Poorly Written Notes">
+                    </a>
+                    <button class="gh-burger"></button>
+                </div>
+
+                <nav class="gh-head-menu">
+                    <ul class="nav">
+    <li class="nav-home"><a href="https://ipcamit.github.io/">Home</a></li>
+    <li class="nav-me"><a href="https://ipcamit.github.io/me/">Me</a></li>
+</ul>
+
+                </nav>
+
+<!--                <div class="gh-head-actions">
+                        <a class="gh-head-btn" href="#/portal/signup" data-portal="signup">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3.33332 3.33334H16.6667C17.5833 3.33334 18.3333 4.08334 18.3333 5.00001V15C18.3333 15.9167 17.5833 16.6667 16.6667 16.6667H3.33332C2.41666 16.6667 1.66666 15.9167 1.66666 15V5.00001C1.66666 4.08334 2.41666 3.33334 3.33332 3.33334Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18.3333 5L9.99999 10.8333L1.66666 5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>                            Subscribe
+                        </a>
+                </div>
+--!>
+            </div>
+        </header>
+
+        
+
+<main id="gh-main" class="gh-main">
+    <article class="gh-article post no-image">
+        <header class="gh-article-header gh-canvas">
+                <span class="gh-article-meta">
+                    By <a href="/author/amit/">Amit Gupta</a>
+                    —
+                    <time datetime="2025-08-04">Aug 4, 2025</time>
+                </span>
+
+            <h1 class="gh-article-title">KIM-API Model Drivers from scratch I: using C++</h1>
+
+
+        </header>
+
+        <div class="gh-content gh-canvas">
+            <h2 id="introduction">Introduction</h2><blockquote>This is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: <a href="https://github.com/ipcamit/kim-api-tutorial">https://github.com/ipcamit/kim-api-tutorial</a> .</blockquote><p>Have you ever wanted to create portable interatomic potentials that work seamlessly across different molecular dynamics simulators? The Knowledgebase of Interatomic Models (KIM) API makes this possible, but diving into model driver development can feel overwhelming, especially if you're not deeply familiar with C++.</p><p>This guide takes you from the fundamental C++ concepts you'll encounter in KIM-API code all the way to understanding a complete Lennard-Jones model driver implementation. Think of this as a friendly companion that demystifies the technical aspects while giving you practical insights into how everything fits together.</p><h2 id="why-kim-api">Why KIM-API?</h2><p>Before we dive into the code, let's understand what problem KIM-API solves. Traditionally, if you developed an interatomic potential, you'd need to implement it separately for each simulator (LAMMPS, ASE, DL_POLY, etc.). KIM-API provides a standardized interface that allows you to write your potential once and have it work everywhere. The magic happens through a combination of smart API design and some C++ techniques we'll explore together.</p><p>What makes KIM-API particularly impressive is its multi-language support. While we're focusing on C++ in this tutorial, the same model can be called from simulators written in C, Fortran, Python, or other languages (The model driver in C post is coming out "soon" !). This language-agnostic design influences many of the technical choices we'll see, from the use of <code>extern "C"</code> linkage to the way functions are registered through pointers.</p><h2 id="prerequisites-and-setup">Prerequisites and Setup</h2><p>To follow along with this tutorial, you'll need:</p><ul><li>A Unix-like environment (preferably Linux)</li><li>A C++ compiler (g++)</li><li>CMake</li><li>Basic familiarity with C/C++ programming</li><li>(Recommended) VS Code with remote development extensions</li></ul><p>For the easiest setup, you can use the KIM Developer Platform Docker container:</p><pre><code class="language-bash"># Pull the Docker image
+docker pull ghcr.io/openkim/developer-platform:latest-minimal
+
+# Run the container
+docker run -it --name kim_dev -v `pwd`:/home/openkim/tutorial ghcr.io/openkim/developer-platform:latest-minimal bash
+
+# In VS Code, use "Attach to Running Container" to connect
+cd tutorial
+</code></pre><h2 id="essential-c-concepts-for-kim-api">Essential C++ Concepts for KIM-API</h2><p>Let me introduce you to five C++ concepts that appear frequently in KIM-API code. Don't worry if these seem complex at first -- we'll break each one down with examples. Each of these concepts exists for a specific reason related to KIM-API's goal of being a truly multi-language framework. If you are comfortable with C++, you can skip.</p><h3 id="1-reinterpretcast-the-i-know-what-im-doing-cast">1. <code>reinterpret_cast</code>: The "I Know What I'm Doing" Cast</h3><p>Casting usually means changing datatype of a variable. Some of the type changes are easier to understand, for example floating points to integers, some changes might not be feasible or disallowed . Normally casting includes set of rules on how to change one object to the desired one. In the float to int example above you might desire that while converting you round off to nearest integer, or simply truncate the floating part (akin to <code>floor</code> function, the usual C++ way). Which one do you want depends on your use case. For complex objects (like C++ classes) this conversion is even more tricky as it involves multiple variables, allocated memory blocks etc.</p><p>Think of <code>reinterpret_cast</code> as telling the compiler: "Trust me, I want to look at this memory differently." It's like having a box labeled "Books" but deciding to treat it as "General Storage" -- the contents don't change, just how you interpret them. Normally (<code>static_cast</code>) wont allow you to do it, but <code>reinterpret_cast</code> will ensure that it just starts treating the object as you asked, like an obedient disciple.</p><p>In KIM-API, we use <code>reinterpret_cast</code> to convert between specific model objects and generic <code>void*</code> pointers. This allows the API to handle different model types uniformly while maintaining C compatibility. Why does this matter? Because C doesn't have classes or templates, it only understands basic pointers. By converting everything to <code>void*</code>, we create a common ground that all languages can work with.</p><pre><code class="language-cpp">#include &lt;iostream&gt;
+
+struct Data { 
+    int a; 
+    double b; 
+};
+
+int main() {
+    Data myData = {10, 3.14};
+    
+    // Treat the Data object's memory as raw bytes
+    char* bytePtr = reinterpret_cast&lt;char*&gt;(&amp;myData);
+    
+    // We can now examine the raw memory
+    std::cout &lt;&lt; "First few bytes of Data object:\n";
+    for (int i = 0; i &lt; sizeof(Data); ++i) {
+        std::cout &lt;&lt; std::hex &lt;&lt; (int)(unsigned char)bytePtr[i] &lt;&lt; " ";
+    }
+    
+    return 0;
+}
+</code></pre><p><strong>Why it matters for KIM-API</strong>: The framework needs to store pointers to your model objects in a generic way that works across languages. When KIM calls your functions, you'll retrieve your model object using <code>reinterpret_cast</code> to convert the generic pointer back to your specific type (Adapter pattern discussed below).</p><h3 id="2-templates-asking-the-compiler-to-write-code-for-you">2. Templates: Asking the Compiler to Write Code for You</h3><p>Templates are like recipe cards where you leave some ingredients blank. When you use the recipe, you fill in the specific ingredients, and the compiler creates the actual code for you. It is an extremely powerful feature of the C++ language, where the template variables you leave are autocompleted by the compiler based on use cases.</p><pre><code class="language-cpp">#include &lt;iostream&gt;
+
+// Function template to find the maximum of two values
+template &lt;typename T&gt;  // T is a placeholder for any type
+T maximum(T a, T b) {
+    return (a &gt; b) ? a : b;
+}
+
+int main() {
+    std::cout &lt;&lt; "Max(5, 10): " &lt;&lt; maximum(5, 10) &lt;&lt; std::endl;         // T becomes int
+    std::cout &lt;&lt; "Max(3.14, 2.71): " &lt;&lt; maximum(3.14, 2.71) &lt;&lt; std::endl; // T becomes double
+    
+    return 0;
+}
+</code></pre><p>In the above example, you need not provide integer/floating point interpretation of your <code>maximum</code> function. The compiler saw that you first called the maximum function with two floating point numbers (therefore <code>T</code> is <code>float</code>) and it created a <code>float maximum (float a, float b)</code> function for you. In the second call compiler understood that now <code>T</code> is an int so it created a <code>int maximum (int a, int b)</code> function.</p><blockquote>What if you had a call like maximum(float, int)?<br>The compiler will fail to deduce the correct type and you should get the following compile time error:</blockquote><pre><code class="language-c++">tmp.cpp:11:56: error: no matching function for call to ‘maximum(double, int)’
+   11 |     std::cout &lt;&lt; "Max(3.14, 2.71): " &lt;&lt; maximum(3.14, 2) &lt;&lt; std::endl; // T becomes double
+      |                                                        ^
+tmp.cpp:5:3: note: candidate: ‘template&lt;class T&gt; T maximum(T, T)’
+    5 | T maximum(T a, T b) {
+</code></pre><p><strong>Advanced KIM-API Usage - Compute Dispatch</strong>: One of the most powerful uses of templates in KIM-API is the "compute dispatch" pattern. Instead of having runtime checks inside your inner loops (which can kill performance), you use templates to generate multiple versions of your compute function at compile time:</p><pre><code class="language-cpp">// Template parameters control what calculations are performed
+template&lt;bool doForces, bool doEnergy, bool doStress&gt;
+int ComputeImplementation(/* parameters */) {
+    // Loop over particles
+    for (int i = 0; i &lt; nParticles; ++i) {
+        // Calculate distance, etc.
+        
+        // These if statements are evaluated at compile time!
+        if (doEnergy) {
+            *energy += calculateEnergy(r);
+        }
+        
+        if (doForces) {
+            calculateForces(r, forces);
+        }
+        
+        if (doStress) {
+            calculateStress(r, stress);
+        }
+    }
+}
+
+// In your main Compute function:
+int Compute(/* parameters */) {
+    // Determine what the simulator requested
+    bool hasForces = (forces != NULL);
+    bool hasEnergy = (energy != NULL);
+    bool hasStress = (stress != NULL);
+    
+    // Dispatch to the right template instantiation
+    if (hasForces &amp;&amp; hasEnergy &amp;&amp; !hasStress) {
+        return ComputeImplementation&lt;true, true, false&gt;(/* parameters */);
+    } else if (hasForces &amp;&amp; !hasEnergy &amp;&amp; !hasStress) {
+        return ComputeImplementation&lt;true, false, false&gt;(/* parameters */);
+    }
+    // ... handle all 8 combinations
+}
+</code></pre><p>The beauty of this approach is that the compiler removes all the <code>if</code> statements inside the loops, creating highly optimized code for each specific case. You write the logic once, but get multiple optimized versions automatically.</p><h3 id="3-extern-c-universal-language-compatibility">3. <code>extern "C"</code>: Universal Language Compatibility</h3><p>C++ "mangles" function names to support features like overloading. For example, <code>process_data(int)</code> might become something like <code>_Z12process_datai</code> internally. The <code>extern "C"</code> directive tells the compiler to use C-style naming, keeping function names unchanged.</p><p>This is absolutely critical for KIM-API because it needs to work with Fortran simulators, C-based codes, and other languages. These languages don't understand C++ name mangling -- they expect functions to have simple, predictable names.</p><pre><code class="language-cpp">// Without extern "C" - C++ will mangle these names
+void process_data(int data) {
+    volatile int x = data;
+}
+
+// With extern "C" - name stays as "process_data_for_c"
+extern "C" void process_data_for_c(int data) {
+    volatile int z = data;
+}
+</code></pre><p><strong>Why it matters for KIM-API</strong>: The entry point function <code>model_driver_create</code> must have <code>extern "C"</code> linkage so that KIM can find it regardless of what language the simulator is written in. This is the bridge that makes multi-language support possible.</p><h3 id="4-static-keep-only-one-copy">4. Static: Keep Only One Copy</h3><p>The <code>static</code> keyword in C++ has different meanings depending on context. For class methods, it means "this function doesn't need an object instance" -- similar to Python's <code>@staticmethod</code>.</p><p>Understanding why KIM-API uses static functions requires thinking about function pointers across languages. In C and Fortran, you can only create pointers to regular functions, not to member functions of objects (which have an implicit <code>this</code> parameter, similar to python <code>self</code>). Static member functions don't have a <code>this</code> parameter, making them compatible with C-style function pointers.</p><pre><code class="language-cpp">class LennardJones {
+public:
+    // Static member function - no 'this' pointer
+    static int Compute(/* parameters */) {
+        // Can't access non-static member variables here
+        // Must retrieve the object from KIM's storage
+        return 0;
+    }
+    
+    // Regular member function - has implicit 'this' pointer
+    int RegularCompute(/* parameters */) {
+        // Actual signature int RegularCompute(LennardJones* this, /* paramerters */)
+        // Can access member variables through 'this'
+        // But can't be used as a C-style function pointer!
+        return 0;
+    }
+};
+</code></pre><p><strong>Why it matters for KIM-API</strong>: KIM needs to store pointers to your functions in a way that works across all languages. Static member functions can be treated as regular C functions, making them perfect for this purpose.</p><h3 id="5-pimpl-pattern-hide-the-implementation-details">5. PIMPL Pattern: Hide the Implementation Details</h3><p>PIMPL (Pointer to Implementation) is like having a public reception desk that handles all requests while the actual work happens in a private office behind the scenes. This pattern separates the interface from the implementation. Lot of C++ KIM-API drivers follow this pattern so it is useful to know it if you want to look for implementation of various drivers.</p><p><strong>Important Note</strong>: The example we'll walk through is a minimal implementation that does NOT use PIMPL. We're keeping things simple to focus on the core concepts. In production model drivers, you might see PIMPL used to keep the public interface stable while allowing the implementation to change.</p><h2 id="kim-apis-multi-language-design-philosophy">KIM-API's Multi-Language Design Philosophy</h2><p>Before we dive into the code, let's understand how KIM-API's design choices enable multi-language support:</p><ol><li><strong>Zero-Based vs One-Based Indexing</strong>: Different languages have different conventions. C and C++ use zero-based arrays, while Fortran traditionally uses one-based arrays. KIM-API lets you specify which convention your model uses through <code>SetModelNumbering()</code>.</li><li><strong>Function Pointers Instead of Virtual Functions</strong>: Virtual functions are a C++ feature that doesn't translate to C or Fortran. By using function pointers registered through the API, KIM maintains language neutrality.</li><li><strong>Opaque Pointers</strong>: The <code>void*</code> pointer approach means that each language only needs to understand basic pointer types, not complex C++ objects.</li><li><strong>Explicit Memory Management</strong>: While modern C++ might use smart pointers, KIM-API uses explicit <code>new</code> and <code>delete</code> to maintain compatibility with C-style memory management that all languages understand.</li></ol><h2 id="understanding-the-kim-api-model-driver-structure">Understanding the KIM-API Model Driver Structure</h2><p>Now that we've covered the C++ basics and understood the multi-language design philosophy, let's see how a KIM-API model driver fits together. A model driver consists of:</p><ol><li><strong>Implementation</strong> (the driver): The physics and algorithms</li><li><strong>Parameters</strong> (the model): Specific values like epsilon and sigma for Lennard-Jones</li><li><strong>Compute Arguments</strong>: The interface with the simulator</li></ol><p>The basic flow looks like this:</p><pre><code>Simulator (any language) → KIM-API → Your Model Driver → Calculations → Results back to Simulator
+</code></pre><h2 id="walking-through-a-lennard-jones-implementation">Walking Through a Lennard-Jones Implementation</h2><p>Let's examine a complete, working Lennard-Jones model driver. This is a minimal implementation designed for clarity -- it doesn't use advanced patterns like PIMPL or compute dispatch.</p><h3 id="the-header-file-myljhpp">The Header File (MyLJ.hpp)</h3><pre><code class="language-cpp">#ifndef LJ_HPP_ 
+#define LJ_HPP_ 
+
+#include "KIM_ModelDriverHeaders.hpp"
+
+// Entry point function with C linkage
+extern "C" {
+int model_driver_create(KIM::ModelDriverCreate * const modelDriverCreate,
+                        KIM::LengthUnit const requestedLengthUnit,
+                        KIM::EnergyUnit const requestedEnergyUnit,
+                        KIM::ChargeUnit const requestedChargeUnit,
+                        KIM::TemperatureUnit const requestedTemperatureUnit,
+                        KIM::TimeUnit const requestedTimeUnit);
+}
+
+class LennardJones612
+{
+ public:
+  // Constructor and destructor
+  LennardJones612(KIM::ModelDriverCreate * const modelDriverCreate,
+                  KIM::LengthUnit const requestedLengthUnit,
+                  KIM::EnergyUnit const requestedEnergyUnit,
+                  KIM::ChargeUnit const requestedChargeUnit,
+                  KIM::TemperatureUnit const requestedTemperatureUnit,
+                  KIM::TimeUnit const requestedTimeUnit,
+                  int * const ier);
+  ~LennardJones612();
+
+  // Static member functions for KIM callbacks
+  static int Destroy(KIM::ModelDestroy * const modelDestroy);
+  static int Refresh(KIM::ModelRefresh * const modelRefresh);
+  static int Compute(KIM::ModelCompute const * const modelCompute,
+                     KIM::ModelComputeArguments const * const modelComputeArguments);
+  static int ComputeArgumentsCreate(
+      KIM::ModelCompute const * const modelCompute,
+      KIM::ModelComputeArgumentsCreate * const modelComputeArgumentsCreate);
+  static int ComputeArgumentsDestroy(
+      KIM::ModelCompute const * const modelCompute,
+      KIM::ModelComputeArgumentsDestroy * const modelComputeArgumentsDestroy);
+
+  // Model parameters - stored directly in the class (no PIMPL)
+  std::string species;
+  double cutoff, sigma, epsilon;
+};
+
+#endif  // LJ_HPP_
+</code></pre><p>Notice how all the KIM callback functions are declared as <code>static</code>. This is the adapter pattern in action -- these static functions will retrieve the actual model object and forward calls to it. This design allows C and Fortran codes to call these functions through simple function pointers.</p><h3 id="the-implementation-file-myljcppkey-sections">The Implementation File (MyLJ.cpp) - Key Sections</h3><p>Let's walk through the implementation step by step.</p><h4 id="1-the-entry-point">1. The Entry Point</h4><pre><code class="language-cpp">extern "C" {
+// universal C like function to be called in all languages
+int model_driver_create(KIM::ModelDriverCreate * const modelDriverCreate,
+                        KIM::LengthUnit const requestedLengthUnit,
+                        KIM::EnergyUnit const requestedEnergyUnit,
+                        KIM::ChargeUnit const requestedChargeUnit,
+                        KIM::TemperatureUnit const requestedTemperatureUnit,
+                        KIM::TimeUnit const requestedTimeUnit)
+{
+    int ier;
+    
+    // Create our model object
+    LennardJones612 * modelObject;
+    // allocate a LennardJones driver object using `new`
+    modelObject = new LennardJones612(modelDriverCreate,
+                                      requestedLengthUnit,
+                                      requestedEnergyUnit,
+                                      requestedChargeUnit,
+                                      requestedTemperatureUnit,
+                                      requestedTimeUnit,
+                                      &amp;ier);
+    // delete if failed
+    if (ier != 0) {
+        delete modelObject;
+        return ier;
+    }
+    
+    // Store the pointer in KIM's system
+    modelDriverCreate-&gt;SetModelBufferPointer(static_cast&lt;void *&gt;(modelObject));
+    
+    return 0;
+}
+}
+</code></pre><p>This function is the first thing KIM calls when creating your model. The <code>extern "C"</code> wrapper ensures that whether KIM is being called from a Fortran MD code or a C++ simulator, it can always find this function by name.</p><h4 id="2-the-constructorsetting-up-the-model">2. The Constructor - Setting Up the Model</h4><p>The constructor does several important tasks, each designed with multi-language compatibility in mind:</p><pre><code class="language-cpp">LennardJones612::LennardJones612(/* parameters */) {
+    *ier = 0;
+    
+    // Step 1: Set the numbering convention (0-based vs 1-based arrays)
+    // This is crucial for Fortran compatibility!
+    *ier = modelDriverCreate-&gt;SetModelNumbering(KIM::NUMBERING::zeroBased);
+    
+    // Step 2: Define units for calculations
+    // you will usually get the requested units from the simulator
+    // Some drivers, mostly the ML ones, raise error as they can support
+    // multiple units, where as others transform their parameters accordingly
+    *ier = modelDriverCreate-&gt;SetUnits(requestedLengthUnit,
+                                      requestedEnergyUnit,
+                                      KIM::CHARGE_UNIT::unused,
+                                      KIM::TEMPERATURE_UNIT::unused,
+                                      KIM::TIME_UNIT::unused);
+    
+    // Step 3: Read parameters from file
+    // ... (code to read sigma, epsilon, cutoff, species)
+    
+    // Step 4: Unit conversion
+    // If you want your model so support unit conversion, you can get the
+    // conversion constants as shown below
+    double convertLength = 1.0;
+    double convertEnergy = 1.0;
+    *ier = KIM::ModelDriverCreate::ConvertUnit(
+        fromLength, fromEnergy, fromCharge, fromTemperature, fromTime,
+        requestedLengthUnit, requestedEnergyUnit, requestedChargeUnit,
+        requestedTemperatureUnit, requestedTimeUnit,
+        1.0, 0.0, 0.0, 0.0, 0.0,  // exponents
+        &amp;convertLength);
+    *ier = KIM::ModelDriverCreate::ConvertUnit(
+        fromLength, fromEnergy, fromCharge, fromTemperature, fromTime,
+        requestedLengthUnit, requestedEnergyUnit, requestedChargeUnit,
+        requestedTemperatureUnit, requestedTimeUnit,
+        0.0, 1.0, 0.0, 0.0, 0.0,  // exponents
+        &amp;convertEnergy);
+    // here conversion constant (last arg) = (length factor)^ first exponent * 
+    //   									 (energy factor)^ second exponent * ...
+    
+    
+    // Apply conversions
+    cutoff *= convertLength;
+    sigma *= convertLength;
+    epsilon *= convertEnergy;
+    
+    // Step 5: Register parameters with KIM
+    // These parameters will be saved with details, and can be queried for training
+    // or other purposes.
+    *ier = modelDriverCreate-&gt;SetParameterPointer(
+        1, &amp;cutoff, "cutoff", "Cutoff of the LJ model");
+    
+    // Step 6: Configure neighbor lists
+    // See kim api docs for details on influence distance vs cutoff distance
+    // modelWillNotRequestNeighborsOfNoncontributingParticles_ does what is says!
+    // if set to false, KIM-API will also ask the simulator to compute the neighbors
+    // of non contributing atoms.
+    modelDriverCreate-&gt;SetInfluenceDistancePointer(&amp;cutoff);
+    modelDriverCreate-&gt;SetNeighborListPointers(
+        1, &amp;cutoff, &amp;modelWillNotRequestNeighborsOfNoncontributingParticles_);
+    
+    // Step 7: Register callback functions
+    // This static function will be called for compute.
+    // You need to provide other static functions as well, for example
+    // Compute arguemens functions. See the example for more details.
+    KIM::ModelComputeFunction * compute = LennardJones612::Compute;
+    *ier = modelDriverCreate-&gt;SetRoutinePointer(
+        KIM::MODEL_ROUTINE_NAME::Compute,
+        KIM::LANGUAGE_NAME::cpp, true,
+        reinterpret_cast&lt;KIM::Function *&gt;(compute));
+}
+</code></pre><p>Each step here addresses multi-language compatibility:</p><ul><li><strong>Numbering</strong>: Fortran arrays typically start at 1, C/C++ at 0. This setting tells KIM how to number particles and arrays.</li><li><strong>Units</strong>: Different codes may use different unit systems. KIM handles the conversion.</li><li><strong>Function Registration</strong>: We register static functions that can be called from any language.</li></ul><h4 id="3-the-compute-functionwhere-physics-happens">3. The Compute Function - Where Physics Happens</h4><p>This is the heart of your model, called repeatedly during simulations. Let me show you the complete function with all its important parts, bet before that you would notice <code>ModelComputeArguments</code> pointers. These are supposed to point to various memory locations which contain, or are supposed to contain the information to/from the simulator. Namely, coordinates, species, contributing/non-contributing classification, energy, and forces, etc. You can access these pointers using <code>GetArgumentPointer</code> function.</p><pre><code class="language-cpp">int LennardJones612::Compute(
+    KIM::ModelCompute const * const modelCompute,
+    KIM::ModelComputeArguments const * const modelComputeArguments) {
+    
+    // Retrieve our model object
+    LennardJones612 * modelObject = NULL;
+    modelCompute-&gt;GetModelBufferPointer(reinterpret_cast&lt;void **&gt;(&amp;modelObject));
+    
+    // Get pointers to simulation data
+    int const * numberOfParticles;
+    int const * particleContributing;
+    double const * coordinates;
+    double * forces = NULL;
+    double * energy = NULL;
+    
+    // Request the data we need
+    modelComputeArguments-&gt;GetArgumentPointer(
+        KIM::COMPUTE_ARGUMENT_NAME::numberOfParticles, &amp;numberOfParticles);
+    modelComputeArguments-&gt;GetArgumentPointer(
+        KIM::COMPUTE_ARGUMENT_NAME::particleContributing, &amp;particleContributing);
+    modelComputeArguments-&gt;GetArgumentPointer(
+        KIM::COMPUTE_ARGUMENT_NAME::coordinates, &amp;coordinates);
+    modelComputeArguments-&gt;GetArgumentPointer(
+        KIM::COMPUTE_ARGUMENT_NAME::partialForces, &amp;forces);
+    modelComputeArguments-&gt;GetArgumentPointer(
+        KIM::COMPUTE_ARGUMENT_NAME::partialEnergy, &amp;energy);
+    
+    // Initialize outputs
+    if (energy != NULL) *energy = 0.0;
+    if (forces != NULL) {
+        for (int i = 0; i &lt; *numberOfParticles; ++i) {
+            forces[3*i + 0] = 0.0;
+            forces[3*i + 1] = 0.0;
+            forces[3*i + 2] = 0.0;
+        }
+    }
+    
+    // --- Retrieve Model Parameters ---
+    // Get the Lennard-Jones parameters (sigma, epsilon, cutoff) from our modelObject.
+    // These were read from the parameter file and converted to consistent units during construction.
+    double sigma_val = modelObject-&gt;sigma;
+    double epsilon_val = modelObject-&gt;epsilon;
+    double cutoff_val = modelObject-&gt;cutoff;
+    double cutoff_sq = cutoff_val * cutoff_val;
+    
+    // Main computation loop
+    for (int i = 0; i &lt; *numberOfParticles; ++i) {
+        if (particleContributing[i] == 0) continue;
+        
+        // Get neighbors for particle i
+        int numnei;
+        int const * neighbors;
+        modelComputeArguments-&gt;GetNeighborList(0, i, &amp;numnei, &amp;neighbors);
+        
+        // Loop over neighbors
+        for (int jj = 0; jj &lt; numnei; ++jj) {
+            int j = neighbors[jj];
+            
+            // Skip if we've already processed this pair from j's side
+            if (j &lt; i &amp;&amp; particleContributing[j] == 1) continue;
+            
+            // Calculate distance
+            double dx = coordinates[3*i + 0] - coordinates[3*j + 0];
+            double dy = coordinates[3*i + 1] - coordinates[3*j + 1];
+            double dz = coordinates[3*i + 2] - coordinates[3*j + 2];
+            double r2 = dx*dx + dy*dy + dz*dz;
+            
+            if (r2 &gt; cutoff_sq) continue;
+            
+            // Lennard-Jones calculations
+            double sigma_sq_div_r2 = (sigma_val * sigma_val) / r2;
+            double sigma6_div_r6 = sigma_sq_div_r2 * sigma_sq_div_r2 * sigma_sq_div_r2;
+            double sigma12_div_r12 = sigma6_div_r6 * sigma6_div_r6;
+            
+            double pair_energy = 4.0 * epsilon_val * (sigma12_div_r12 - sigma6_div_r6);
+            double f_over_r = (24.0 * epsilon_val / r2) * 
+                              (2.0 * sigma12_div_r12 - sigma6_div_r6);
+            
+            // Handle ghost atoms correctly
+            if (particleContributing[j] == 0) {
+                f_over_r *= 0.5;  // Ghost atoms get half force
+            }
+            
+            // Apply forces and write it back to required pointer
+            // Check if it is a nullptr first. If it is a nullptr, it means
+            // that the simulator has not requested the forces, and you are
+            // now writing it to undefined space -- segfault.
+            if (forces != nullptr) {
+                forces[3*i + 0] += f_over_r * dx;
+                forces[3*i + 1] += f_over_r * dy;
+                forces[3*i + 2] += f_over_r * dz;
+                forces[3*j + 0] -= f_over_r * dx;
+                forces[3*j + 1] -= f_over_r * dy;
+                forces[3*j + 2] -= f_over_r * dz;
+            }
+            
+            // Add energy contribution
+            if (energy != nullptr) {
+                if (particleContributing[j] == 1) {
+                    *energy += pair_energy;
+                } else {
+                    *energy += 0.5 * pair_energy;  // Ghost atoms contribute half
+                }
+            }
+        }
+    }
+    
+    return 0;
+}
+</code></pre><p>The compute function demonstrates several important concepts:</p><ol><li><strong>Model Object Retrieval</strong>: We use <code>reinterpret_cast</code> to get our C++ object from KIM's generic storage</li><li><strong>Parameter Access</strong>: We retrieve the model parameters (sigma, epsilon, cutoff) from our object</li><li><strong>Optional Outputs</strong>: We check if forces and energy pointers are NULL -- the simulator might not need both</li><li><strong>Ghost Atom Handling</strong>: Non-contributing particles need special treatment to avoid double-counting</li></ol><h3 id="the-build-configuration-cmakeliststxt">The Build Configuration (CMakeLists.txt)</h3><p>This ensures that KIM-API correctly handles the cmake build process. Just use this as a template.</p><pre><code class="language-cmake">cmake_minimum_required(VERSION 3.10)
+list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_CMAKE_PREFIX_DIR})
+find_package(KIM-API 2.0 REQUIRED CONFIG)
+
+if(NOT TARGET kim-api)
+  enable_testing()
+  project("${KIM_API_PROJECT_NAME}" VERSION "${KIM_API_VERSION}"
+    LANGUAGES CXX C Fortran)
+endif()
+
+set(MODEL_DRIVER_NAME "MyLJ__MD_000000000000_000")
+
+add_kim_api_model_driver_library(
+  NAME                    ${MODEL_DRIVER_NAME}
+  CREATE_ROUTINE_NAME     "model_driver_create"
+  CREATE_ROUTINE_LANGUAGE "cpp"
+)
+
+target_sources(${MODEL_DRIVER_NAME} PRIVATE MyLJ.cpp)
+</code></pre><h2 id="key-takeaways-and-best-practices">Key Takeaways and Best Practices</h2><p>As you develop your own model drivers, keep these points in mind:</p><ol><li><strong>Always check return codes</strong>: Every KIM function returns an error code. Check it!</li><li><strong>Handle optional arguments gracefully</strong>: Not all simulators will request all possible outputs. Always check if pointers are <code>nullptr</code> before using them.</li><li><strong>Think about performance</strong>: The Compute function is called millions of times. Every optimization matters. Consider learning about compute dispatch for production code.</li><li><strong>Use the adapter pattern</strong>: Static member functions that retrieve the model object and forward to regular methods keep your code clean and compatible with KIM's C-style callbacks.</li><li><strong>Remember multi-language users</strong>: Your model might be called from Fortran, C, or other languages. Stick to KIM's patterns to ensure compatibility.</li><li><strong>Debug systematically</strong>: If something goes wrong, check <code>kim.log</code> first. Compile KIM-API in debug mode for more detailed error messages.</li></ol><h2 id="common-pitfalls-and-how-to-avoid-them">Common Pitfalls and How to Avoid Them</h2><h3 id="ghost-atoms-and-contributing-particles">Ghost Atoms and Contributing Particles</h3><p>Remember that simulators may include "ghost" atoms for periodic boundaries. Always check the <code>particleContributing</code> array and handle non-contributing particles correctly. This is especially important for parallel simulations where ghost atoms ensure correct forces across processor boundaries.</p><h3 id="unit-conversions">Unit Conversions</h3><p>Always convert your parameters to the requested units. KIM provides conversion functions -- use them! Different simulators and different countries use different unit systems, and KIM handles this complexity for you.</p><h3 id="array-indexing">Array Indexing</h3><p>Remember that if you set <code>NUMBERING::zeroBased</code>, particle indices run from 0 to N-1. If you set <code>NUMBERING::oneBased</code> (common for Fortran models), they run from 1 to N. Be consistent!</p><h2 id="beyond-the-basics">Beyond the Basics</h2><p>Once you're comfortable with basic model drivers, you can explore advanced techniques:</p><ul><li><strong>Compute Dispatch</strong>: Use templates to generate optimized versions of your compute function for different combinations of outputs</li><li><strong>PIMPL Pattern</strong>: Separate your interface from implementation for cleaner code and better encapsulation</li><li><strong>Parameter Files</strong>: Support multiple parameter sets for different materials</li><li><strong>Callbacks</strong>: Implement advanced features like stress tensors and virial calculations</li><li><strong>Multi-Species Support</strong>: Extend beyond single-element systems</li><li><strong>Parallel Optimization</strong>: Use OpenMP or vectorization in your compute loops</li></ul><h2 id="final-words">Final words</h2><p>Once you have created this model driver, simply install it as</p><pre><code class="language-bash">kim-api-collections-management install user &lt;path/to/your/driver/folder&gt;
+</code></pre><p>in above example it would be something like</p><pre><code class="language-bash">kim-api-collections-management install user MyLJ__MD_000000000000_000
+</code></pre><p>Given that you kept all your code in a folder named <code>MyLJ__MD_000000000000_000</code>.</p><p>Creating KIM-API model drivers might seem daunting at first, but it's really about understanding a few key patterns and concepts. The C++ features we explored -- <code>reinterpret_cast</code>, templates, <code>extern "C"</code>, static functions -- all serve specific purposes in creating a flexible, performant interface between your physics and simulators written in any language.</p><p>Remember that KIM-API's design choices all stem from its goal of true portability. Every time you see something that seems unnecessarily complex, ask yourself: "How would this work if called from Fortran?" The answer usually explains the design choice.</p><p>The example we walked through is intentionally minimal -- no PIMPL pattern, no compute dispatch, just the essentials. This is perfect for learning and for simple potentials. As your models grow more complex, you can gradually adopt more advanced patterns. Don't get too caught up in the complexity. Start with a working example, modify it step by step, and build your understanding through practice.</p><p>The beauty of KIM-API is that once you've written your model driver, it works everywhere. Your carefully crafted potential becomes a portable, reusable piece of scientific software that others can use and build upon. Whether someone calls it from a Fortran code written in the 1990s or a cutting-edge C++ simulator, your model will work seamlessly. That's the power of standardization, and you're now equipped to be part of it.</p><p>Happy coding, and welcome to the KIM community, oh and please submit your driver to <a href="https://openkim.org">https://openkim.org</a> !</p><h2 id="additional-resources">Additional Resources</h2><ul><li><a href="https://kim-api.org/">KIM-API Documentation</a></li><li><a href="https://openkim.org/">OpenKIM Repository</a> - Browse existing models for examples</li><li><a href="https://github.com/openkim/kim-api">KIM-API GitHub</a> - Source code and examples</li><li>The example code from this <a href="https://github.com/ipcamit/kim-api-tutorial">tutorial</a></li></ul><hr><h2 id="appendix-understanding-models-vs-model-drivers">Appendix: Understanding Models vs Model Drivers</h2><p>Now that you understand how to create a model driver, let me introduce you to a crucial concept that makes KIM-API particularly powerful: the separation between model drivers and models. This distinction might seem like unnecessary complexity at first, but it's actually a brilliant design that promotes code reuse and scientific reproducibility.</p><h3 id="the-model-driver-relationship">The Model-Driver Relationship</h3><p>Think of this relationship like a recipe book versus actual meals. A model driver is like a recipe for "pasta with sauce" -- it describes the general process, the steps involved, and what ingredients (parameters) are needed. A model, on the other hand, is like "spaghetti carbonara" -- it's a specific instance that uses the pasta recipe with particular ingredients (bacon, eggs, parmesan, specific cooking times). Another useful analogy is the classes in C++/Python, where model driver is the class, where as the model is a particular instantiation of this class with desired set of parameters.</p><p>In KIM-API terms, your Lennard-Jones model driver that we just built is the recipe. It knows how to calculate forces and energies given three parameters: sigma, epsilon, and cutoff. But it doesn't know what those values should be for any particular material. That's where models come in.</p><h3 id="creating-a-silicon-lennard-jones-model">Creating a Silicon Lennard-Jones Model</h3><p>Let's look at a concrete example. Suppose we want to create a Lennard-Jones model for silicon. We don't need to write any new C++ code -- we just need to tell KIM to use our existing driver with silicon-specific parameters.</p><p>Here's the model's CMakeLists.txt file:</p><pre><code class="language-cmake">cmake_minimum_required(VERSION 3.10)
+list(APPEND CMAKE_PREFIX_PATH $ENV{KIM_API_CMAKE_PREFIX_DIR})
+find_package(KIM-API 2.0 REQUIRED CONFIG)
+if(NOT TARGET kim-api)
+  enable_testing()
+  project("${KIM_API_PROJECT_NAME}" VERSION "${KIM_API_VERSION}"
+    LANGUAGES CXX C Fortran)
+endif()
+
+add_kim_api_model_library(
+  NAME            "LJSi_MO_111111111110_000"
+  DRIVER_NAME     "MyLJ_MD_111111111111_000"
+  PARAMETER_FILES "si.param"
+)
+</code></pre><p>Notice how different this is from the model driver's CMakeLists.txt. Instead of <code>add_kim_api_model_driver_library</code>, we use <code>add_kim_api_model_library</code>. The key line is <code>DRIVER_NAME</code> -- this tells KIM which driver to use for this model. We're essentially saying, "Create a model called LJSi that uses the MyLJ driver with the parameters found in si.param."</p><h3 id="the-parameter-file">The Parameter File</h3><p>The parameter file for our silicon model (si.param) contains:</p><pre><code>Si  7.9111800  3.1743100  1.9778000
+</code></pre><p>Let me break down what each number represents based on how our driver reads the file:</p><ul><li><code>Si</code>: The chemical species (silicon)</li><li><code>7.9111800</code>: The cutoff distance in Angstroms</li><li><code>3.1743100</code>: The epsilon parameter in eV (the depth of the potential well)</li><li><code>1.9778000</code>: The sigma parameter in Angstroms (the distance at which the potential is zero)</li></ul><p>Remember the code in our driver's constructor that reads these values:</p><pre><code class="language-cpp">buffer &gt;&gt; species;   // Reads "Si"
+buffer &gt;&gt; cutoff;    // Reads 7.9111800
+buffer &gt;&gt; epsilon;   // Reads 3.1743100
+buffer &gt;&gt; sigma;     // Reads 1.9778000
+</code></pre><h3 id="the-beauty-of-parameter-file-flexibility">The Beauty of Parameter File Flexibility</h3><p>Here's something important to understand: KIM-API places no restrictions on the format of parameter files. Your model driver decides how to read and interpret them. This flexibility means you could:</p><ul><li>Use JSON or XML for more complex parameter sets</li><li>Include additional parameters like temperature-dependent corrections</li><li>Add comments and documentation within the parameter file</li><li>Store parameters for multiple species in a single file</li></ul><p>For example, a more sophisticated parameter file might look like:</p><pre><code># Lennard-Jones parameters for various elements
+# Format: Element cutoff epsilon sigma [optional: comments]
+Si  7.9111800  3.1743100  1.9778000  # Fitted to crystalline silicon
+Ge  8.1234500  3.2456700  2.0123400  # Fitted to germanium
+</code></pre><p>Your driver would need to parse this format appropriately, perhaps skipping comment lines and handling multiple elements.</p><h3 id="creating-multiple-models-from-one-driver">Creating Multiple Models from One Driver</h3><p>The real power of this separation becomes clear when you consider creating models for different materials. With our single Lennard-Jones driver, we can create models for:</p><ul><li>Silicon (LJSi_MO_111111111110_000)</li><li>Argon (LJAr_MO_111111111110_000)</li><li>Any other element or compound that can be approximated with Lennard-Jones</li></ul><p>Each model would have its own parameter file (toy example below, do not use them in actual simulations):</p><p><strong>ar.param:</strong></p><pre><code>Ar  8.5000000  0.0104000  3.4000000
+</code></pre><p><strong>ne.param:</strong></p><pre><code>Ne  5.5000000  0.0031000  2.7400000
+</code></pre><p>Without writing a single line of additional C++ code, we've created three different interatomic potentials! This is the essence of code reuse in scientific software.</p><h3 id="the-model-identification-system">The Model Identification System</h3><p>You might have noticed the cryptic numbers in model names like "LJSi_MO_111111111110_000". This is KIM's systematic naming convention:</p><ul><li><code>LJSi</code>: Human-readable identifier (Lennard-Jones for Silicon)</li><li><code>MO</code>: Indicates this is a Model (not a Model Driver, <code>MD</code> for model driver)</li><li><code>111111111110</code>: A unique identifier (like a serial number)</li><li><code>000</code>: Version number</li></ul><p>This naming system ensures that every model in the KIM repository has a unique identifier, making scientific results reproducible. When someone publishes a paper using "LJSi_MO_111111111110_000", anyone can get exactly the same model and reproduce their results.</p><h3 id="why-this-separation-matters">Why This Separation Matters</h3><p>The model/driver separation embodies several important software engineering principles:</p><ol><li><strong>Don't Repeat Yourself (DRY)</strong>: The physics implementation exists in one place (the driver), while parameters can vary across many models.</li><li><strong>Separation of Concerns</strong>: The driver handles the physics and algorithms; the model handles the material-specific parameters.</li><li><strong>Scalability</strong>: One driver can support hundreds of models without code duplication.</li><li><strong>Maintainability</strong>: Bug fixes or improvements to the driver automatically benefit all models that use it.</li><li><strong>Scientific Reproducibility</strong>: Each model has a unique identifier and fixed parameters, ensuring results can be reproduced exactly.</li></ol><p>This design also makes it easier for different communities to collaborate. A physicist might develop a sophisticated driver implementing new theoretical insights, while materials scientists can create models by fitting parameters to their specific materials of interest. Neither group needs to understand the other's domain deeply -- the interface between driver and model provides a clean separation.</p><p>Remember, every model in the KIM repository started just like this -- someone implemented a driver, someone (possibly the same person) determined appropriate parameters, and they combined them into a model that others can now use. Your contributions, whether drivers or models, become part of this growing ecosystem of scientific software.</p>
+        </div>
+
+            <footer class="gh-article-footer gh-canvas">
+                <nav class="gh-navigation">
+                    <div class="gh-navigation-previous">
+                            <a class="gh-navigation-link" href="/setting-up-clojure-and-scimutils-as-an-absolute-beginner/">
+                                <span class="gh-navigation-label"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+</svg> Previous issue</span>
+                                <h4 class="gh-navigation-title">Setting up Clojure and SCIMUtils as an absolute beginner</h4>
+                            </a>
+                    </div>
+
+                    <div class="gh-navigation-middle"></div>
+
+                    <div class="gh-navigation-next">
+                    </div>
+                </nav>
+            </footer>
+    </article>
+</main>
+
+
+
+<!--        
+            <div class="gh-subscribe">
+                <div class="gh-outer">
+                    <section class="gh-subscribe-inner">
+                            <h3 class="gh-subscribe-title">Subscribe to Poorly Written Notes</h3>
+
+                            <div class="gh-subscribe-description">Don’t miss out on the latest issues. Sign up now to get access to the library of members-only issues.</div>
+
+                            <a class="gh-subscribe-input" href="#/portal/signup" data-portal="signup">
+                                <div class="gh-subscribe-input-text">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3.33332 3.33334H16.6667C17.5833 3.33334 18.3333 4.08334 18.3333 5.00001V15C18.3333 15.9167 17.5833 16.6667 16.6667 16.6667H3.33332C2.41666 16.6667 1.66666 15.9167 1.66666 15V5.00001C1.66666 4.08334 2.41666 3.33334 3.33332 3.33334Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18.3333 5L9.99999 10.8333L1.66666 5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>                                    jamie@example.com
+                                </div>
+                                <div class="gh-subscribe-input-btn">Subscribe</div>
+                            </a>
+                    </section>
+                </div>
+            </div>
+	--!>
+        <footer class="gh-foot gh-outer">
+            <div class="gh-foot-inner gh-inner">
+                <div class="gh-copyright">
+                    Poorly Written Notes © 2025
+                </div>
+
+                <nav class="gh-foot-menu">
+                    
+                </nav>
+
+                <div class="gh-powered-by">
+                    <a href="https://ghost.org/" target="_blank" rel="noopener">Powered by Ghost</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+        <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="pswp__bg"></div>
+
+    <div class="pswp__scroll-wrap">
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <div class="pswp__counter"></div>
+
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                        <div class="pswp__preloader__cut">
+                            <div class="pswp__preloader__donut"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div>
+            </div>
+
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button>
+
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+    <script src="/assets/built/main.min.js?v=212e76eb03"></script>
+
+    
+</body>
+
+</html>
