@@ -1,4 +1,265 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title><![CDATA[Poorly Written Notes]]></title><description><![CDATA[Poorly Written Notes]]></description><link>https://ipcamit.github.io/</link><image><url>https://ipcamit.github.io/favicon.png</url><title>Poorly Written Notes</title><link>https://ipcamit.github.io/</link></image><generator>Ghost 4.35</generator><lastBuildDate>Mon, 04 Aug 2025 14:37:52 GMT</lastBuildDate><atom:link href="https://ipcamit.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[KIM-API Model Drivers from scratch I: using C++]]></title><description><![CDATA[<h2 id="introduction">Introduction</h2><blockquote>This is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: <a href="https://github.com/ipcamit/kim-api-tutorial">https://github.com/ipcamit/kim-api-tutorial</a> .</blockquote><p>Have you ever wanted to</p>]]></description><link>https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/</link><guid isPermaLink="false">6890c4e22776ea6df2690e30</guid><dc:creator><![CDATA[Amit Gupta]]></dc:creator><pubDate>Mon, 04 Aug 2025 14:36:11 GMT</pubDate><content:encoded><![CDATA[<h2 id="introduction">Introduction</h2><blockquote>This is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: <a href="https://github.com/ipcamit/kim-api-tutorial">https://github.com/ipcamit/kim-api-tutorial</a> .</blockquote><p>Have you ever wanted to create portable interatomic potentials that work seamlessly across different molecular dynamics simulators? The Knowledgebase of Interatomic Models (KIM) API makes this possible, but diving into model driver development can feel overwhelming, especially if you&apos;re not deeply familiar with C++.</p><p>This guide takes you from the fundamental C++ concepts you&apos;ll encounter in KIM-API code all the way to understanding a complete Lennard-Jones model driver implementation. Think of this as a friendly companion that demystifies the technical aspects while giving you practical insights into how everything fits together.</p><h2 id="why-kim-api">Why KIM-API?</h2><p>Before we dive into the code, let&apos;s understand what problem KIM-API solves. Traditionally, if you developed an interatomic potential, you&apos;d need to implement it separately for each simulator (LAMMPS, ASE, DL_POLY, etc.). KIM-API provides a standardized interface that allows you to write your potential once and have it work everywhere. The magic happens through a combination of smart API design and some C++ techniques we&apos;ll explore together.</p><p>What makes KIM-API particularly impressive is its multi-language support. While we&apos;re focusing on C++ in this tutorial, the same model can be called from simulators written in C, Fortran, Python, or other languages (The model driver in C post is coming out &quot;soon&quot; !). This language-agnostic design influences many of the technical choices we&apos;ll see, from the use of <code>extern &quot;C&quot;</code> linkage to the way functions are registered through pointers.</p><h2 id="prerequisites-and-setup">Prerequisites and Setup</h2><p>To follow along with this tutorial, you&apos;ll need:</p><ul><li>A Unix-like environment (preferably Linux)</li><li>A C++ compiler (g++)</li><li>CMake</li><li>Basic familiarity with C/C++ programming</li><li>(Recommended) VS Code with remote development extensions</li></ul><p>For the easiest setup, you can use the KIM Developer Platform Docker container:</p><pre><code class="language-bash"># Pull the Docker image
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title><![CDATA[Poorly Written Notes]]></title><description><![CDATA[Poorly Written Notes]]></description><link>https://ipcamit.github.io/</link><image><url>https://ipcamit.github.io/favicon.png</url><title>Poorly Written Notes</title><link>https://ipcamit.github.io/</link></image><generator>Ghost 4.35</generator><lastBuildDate>Mon, 25 Aug 2025 14:39:37 GMT</lastBuildDate><atom:link href="https://ipcamit.github.io/rss/" rel="self" type="application/rss+xml"/><ttl>60</ttl><item><title><![CDATA[Through the looking glass: Implementing KIM-API for Your Molecular Dynamics Simulator]]></title><description><![CDATA[<p>In for penny in for pound! After giving a bare-bones example on how to create a KIM-API potable model using C++, I thought why not go deeper and have a look at how KIM-API works on the simulator side. It might help clarifying several key design decision and ideas. Goal</p>]]></description><link>https://ipcamit.github.io/through-the-looking-glass-implementing-kim-api-for-your-molecular-dynamics-simulator/</link><guid isPermaLink="false">68ac74407d8eefa239e9bb92</guid><dc:creator><![CDATA[Amit Gupta]]></dc:creator><pubDate>Mon, 25 Aug 2025 14:38:13 GMT</pubDate><content:encoded><![CDATA[<p>In for penny in for pound! After giving a bare-bones example on how to create a KIM-API potable model using C++, I thought why not go deeper and have a look at how KIM-API works on the simulator side. It might help clarifying several key design decision and ideas. Goal here is simple, initialize and &#xA0;call a KIM-API portable model for inference, and show the key steps involved.</p><blockquote>I will use the C API, instead of C++ API for simulator side calls as, i) it is more universal, C functions can be used in almost every language cross-call, where C++ name mangling complicates it, ii) &#xA0;it is nearly the same in both languages, as you will see you can very easily guess the C++ API calls from the C names. Also here we will use a <em>dummy</em> simulator ( a simple C/C++ main function!) but the core idea still holds.</blockquote><p>The Knowledgebase of Interatomic Models (KIM-API) is a powerful framework that provides a standardized interface between molecular simulation codes and interatomic potentials. If you&apos;re developing a molecular dynamics simulator or computational materials science tool, integrating KIM-API gives you access to hundreds of validated interatomic models without having to implement each one individually.</p><p>KIM-API provides the API in C, C++ and Fortran natively. It also provides a Python package KIMPY for interfacing with Python based simulators (mostly used in ASE calculators). I am currently trying to port it Julia as well for providing interface with Julia based MD simulators like Molly.jl (more on it later).</p><h2 id="core-concepts">Core Concepts</h2><p>Before diving into implementation, let&apos;s understand the key components:</p><ol><li><strong>Model</strong>: The interatomic potential implementation (e.g., Stillinger-Weber, EAM, MEAM)</li><li><strong>ComputeArguments</strong>: Container for input/output data (positions, forces, energy)</li><li><strong>Neighbor Lists</strong>: Efficient data structures for keeping tabs on particle interactions</li><li><strong>Units System</strong>: Consistent unit handling across models and simulators</li></ol><p>Lets walk through the steps on how to create the models and get them to spit energy and forces. Basic flow involves 3 major steps:</p><ol><li>Initialize the model (calls the <code>model_driver_create</code> function we implemented in our portable model driver).</li><li>Creating the <code>ComputeArguments</code>, basically setting pointers to positions, species, etc, and &#xA0;memory locations to save the energy/forces or other computed properties like virials. These pointers are typically provided by the simulator.</li><li>Neighbor list set-up. I believe this is the most tricky and crucial step. As remaineder of the compute arguments are just read/write operations, neighbor lists are interactively used by the model driver (remember those <code>GetNeighborList</code> calls?). Therefore it is crucial to abstract away any arbitrary arguments in the neighbor list calls such that we can have a uniform API across all simulators, and languages. &#xA0;We will discuss it in more detail later.</li></ol><h2 id="step-1-model-initialization">Step 1: Model Initialization</h2><p>The first step is creating and initializing a KIM model. This involves specifying the units system and model name. Supported units of <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_l_e_n_g_t_h___u_n_i_t.html">Length</a>, <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_e_n_e_r_g_y___u_n_i_t.html">Energy</a>, <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_c_h_a_r_g_e___u_n_i_t.html">Charge</a>, <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_t_e_m_p_e_r_a_t_u_r_e___u_n_i_t.html">Temperature</a>, and <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_t_i_m_e___u_n_i_t.html">Time</a> are strongly typed and enumerated in KIM-API to ensure error-proof model inference. Most model works with all units enumerated, by internal unit conversion mechanism (mostly by transforming the parameters); some models, like the ML ones, might raise an error when asked to initialize in units different from the ones they were trained in. This is because there is no cheap or easy way to transform the model parameters in ML models post training. You can check all the supported units in linked KIM-API docs pages.</p><h3 id="c-function-name-kimmodelcreate-call">C Function Name: <code>KIM_Model_Create</code> call</h3><pre><code class="language-c">int KIM_Model_Create(
+    int numbering,           // 0 for zero-based, 1 for one-based indexing
+    int length_unit,         // e.g., KIM_LENGTH_UNIT_A (Angstrom)
+    int energy_unit,         // e.g., KIM_ENERGY_UNIT_eV
+    int charge_unit,         // e.g., KIM_CHARGE_UNIT_e
+    int temperature_unit,    // e.g., KIM_TEMPERATURE_UNIT_K
+    int time_unit,          // e.g., KIM_TIME_UNIT_ps
+    const char* model_name,  // e.g., &quot;SW_StillingerWeber_1985_Si__MO_405512056662_006&quot;
+    int* units_accepted,     // Output: 1 if units accepted, 0 otherwise
+    void** model_ptr        // Output: pointer to created model
+);
+</code></pre><p>This function creates a model instance with your specified units. The model will either accept your units or request a conversion. Always check <code>units_accepted</code> to ensure compatibility.</p><h2 id="step-2-creating-compute-arguments">Step 2: Creating Compute Arguments</h2><p>Once the model is initialized, create a compute arguments object to hold calculation data. Initializing it is simple:</p><h3 id="c-function-name-kimmodelcomputeargumentscreate">C Function Name: <code>KIM_Model_ComputeArgumentsCreate</code></h3><pre><code class="language-c">int KIM_Model_ComputeArgumentsCreate(
+    void* model,
+    void** compute_arguments
+);
+</code></pre><p>This creates a container that will hold all the data needed for calculations - particle positions, species, and output quantities like energy and forces. Before assigning those pointers, we need to check what all arguments are supported. For example, some models might be able to compute total &#xA0;energy, but might not compute per particle energy decomposition. Hence they will return <code>notSupported</code> enum value for the <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_s_u_p_p_o_r_t___s_t_a_t_u_s.html">Support Status</a>.</p><h2 id="step-3-checking-model-capabilities">Step 3: Checking Model Capabilities</h2><p>Before setting up calculations, verify what the model supports:</p><h3 id="c-function-kimcomputeargumentsgetargumentsupportstatus">C Function: <code>KIM_ComputeArguments_GetArgumentSupportStatus</code></h3><pre><code class="language-c">void KIM_ComputeArguments_GetArgumentSupportStatus(
+    void* compute_arguments,
+    int argument_name,    // e.g., KIM_COMPUTE_ARGUMENT_NAME_partialEnergy
+    int* support_status   // Output: KIM_SUPPORT_STATUS_required/optional/notSupported
+);
+</code></pre><p>Common argument names include:</p><ul><li><code>KIM_COMPUTE_ARGUMENT_NAME_partialEnergy</code> - Total energy</li><li><code>KIM_COMPUTE_ARGUMENT_NAME_partialForces</code> - Forces on particles</li><li><code>KIM_COMPUTE_ARGUMENT_NAME_partialParticleEnergy</code> - Per-particle energies</li><li><code>KIM_COMPUTE_ARGUMENT_NAME_partialVirial</code> - Virial stress tensor</li></ul><p>Check <a href="https://kim-api.readthedocs.io/en/latest/namespace_k_i_m_1_1_c_o_m_p_u_t_e___a_r_g_u_m_e_n_t___n_a_m_e.html">here</a> for the complete list.</p><h2 id="step-4-setting-data-pointers">Step 4: Setting Data Pointers</h2><p>How does your model know what is asked to be computed? Simple, it checks for valid pointers in the <code>ComputeArgument</code> containers, and presume that for any argument, if there exist a valid pointer, that property has to be computed. Once ensuring that the model indeed supports the property you want the model to compute, you set the pointers.</p><h3 id="c-functions-for-setting-pointers">C Functions for Setting Pointers</h3><pre><code class="language-c">// For integer data (particle count, species codes, contributing flags)
+int KIM_ComputeArguments_SetArgumentPointerInteger(
+    void* compute_arguments,
+    int argument_name,
+    int* ptr
+);
+
+// For floating-point data (coordinates, forces, energy)
+int KIM_ComputeArguments_SetArgumentPointerDouble(
+    void* compute_arguments,
+    int argument_name,
+    double* ptr
+);
+</code></pre><p>Essential pointers to set:</p><ul><li><code>numberOfParticles</code> - Total particle count (including ghost atoms for PBC)</li><li><code>particleSpeciesCodes</code> - Integer codes for each particle&apos;s element</li><li><code>coordinates</code> - 3N array of particle positions</li><li><code>particleContributing</code> - 1 for real atoms, 0 for ghost atoms</li><li><code>partialEnergy</code> - Pointer to store computed energy</li><li><code>partialForces</code> - 3N array to store computed forces</li></ul><p>If you are familiar with the LAMMPS Pair style implementation, some of these pointers (for LAMMPS) are</p><!--kg-card-begin: html--><table>
+<thead>
+<tr>
+<th style="text-align: left">KIM Argument</th>
+<th style="text-align: left">LAMMPS Ptr</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left"><code>coordinates</code></td>
+<td style="text-align: left"><code>atom-&gt;x</code></td>
+</tr>
+<tr>
+<td style="text-align: left"><code>partialEnergy</code></td>
+<td style="text-align: left"><code>eng_vdwl</code></td>
+</tr>
+<tr>
+<td style="text-align: left"><code>partialForces</code></td>
+<td style="text-align: left"><code>atom-&gt;f</code></td>
+</tr>
+</tbody>
+</table><!--kg-card-end: html--><p>Similarly, for other simulators you need to find the equivalent pointers to set.</p><h2 id="step-5-neighbor-list-setup">Step 5: Neighbor List Setup</h2><p>The crown jewel of the KIM-API design! Let us understand the challenge first.<br>Each simulator comes with a high-performance neighbor list calculator. They need for different tasks like domain decomposition, fixes, constraints etc. But the model driver/model also needs the neighbor lists for computing pairwise, or angle terms etc. One solution for this could be to bundle KIM-API with its own neighbor lists (as KIMPY does for ASE), but that would mean computing the neighbor lists twice for every call. It would be really time consuming and wasteful. So KIM-API uses very clever way to reuse the simulator neighbor lists.</p><p>On the simulator side, first you need to ask for the cutoff radius or influence distance, you can get it with the following function</p><h3 id="getting-neighbor-list-requirements">Getting Neighbor List Requirements</h3><pre><code class="language-c">void KIM_Model_GetNeighborListPointers(
+    void* model,
+    int* number_of_neighbor_lists,
+    double** cutoffs,
+    int** will_not_request_neighbors_of_ghost_particles
+);
+</code></pre><p>As you can see you will get three values out of this call</p><ol><li><code>number_of_neighbor_lists</code>, some model use multiple lists for computation, e.g. EAM</li><li><code>cutoffs</code> for each neighbor lists</li><li>will the non contributing particles will also need neighbor list (e.g. used in staged graph convolutions)</li></ol><p>Using these values you can ask your simulator to compute the neighbor lists however it seems fit. Now information form your simulator is passed to KIM-API via a <strong>callback</strong> function. You will register your callback function to KIM-API as,</p><h3 id="setting-the-neighbor-callback">Setting the Neighbor Callback</h3><pre><code class="language-c">int KIM_ComputeArguments_SetCallbackPointer(
+    void* compute_arguments,
+    int callback_name,        // KIM_COMPUTE_CALLBACK_NAME_GetNeighborList
+    int language_name,        // KIM_LANGUAGE_NAME_c
+    void* func_ptr,          // Your callback function, here: get_neighbors_callback
+    void* data_object        // Data to pass to callback
+);
+</code></pre><p>And now the callback function itself. The callback function should always the the following signature (it is a must). For C++ classes, you need to declare it as <code>static</code> (those pesky <code>this</code>).</p><p><strong><code>data_object</code></strong>: This is the key to making static callbacks work with object-oriented code. It&apos;s an opaque pointer that KIM-API passes back to you unchanged. Common uses:</p><ul><li>C++: Pointer to your simulator class instance</li><li>C: Pointer to a struct containing neighbor list data</li><li>Python/Julia: Pointer to a wrapper object containing closures</li><li>Fortran: Pointer to a derived type</li></ul><p><code>data_object</code> basically acts like a Trojan-horse of simulator context, hidden into the KIM-API. It passes the neighbor-whatever object from your simulator to the KIM-API. Now whenever KIM-API need the neighbor list it will pass this object back to the callback function ( here we have named it <code>get_neighbors_callback</code>), and this function can use the <code>data_object</code> as the simulator &quot;context&quot;. It can cast it back, ask it for the neighbor list, and pass that information back to the KIM-API model. No need of extra computation, and it works for all simulators/ languages, and what not.</p><p>Lets have a closer look at the neighbor function,</p><h3 id="neighbor-callback-function-signature">Neighbor Callback Function Signature</h3><pre><code class="language-c">int get_neighbors_callback(
+    void* data_object,           // Your context data
+    int number_of_neighbor_lists, // Total number of lists (for validation)
+    double* cutoffs,             // Array of cutoff distances
+    int neighbor_list_index,     // Which neighbor list
+    int particle_index,          // Which particle (simulator&apos;s indexing)
+    int* number_of_neighbors,    // OUTPUT: How many neighbors found
+    int** neighbors_ptr          // OUTPUT: Pointer to neighbor indices array
+);
+</code></pre><p>Breaking down each parameter:</p><p><strong><code>data_object</code></strong>: The context object making a round trip back!</p><p><strong><code>neighbor_list_index</code></strong>: Models can request multiple neighbor lists with different cutoffs. For example, a Tersoff potential might need:</p><ul><li>List 0: First neighbor shell (2.7 &#xC5;)</li><li>List 1: Second neighbor shell (3.2 &#xC5;)</li></ul><p><strong>Return expectations</strong>:</p><ul><li>Return 0 for success, non-zero for error</li><li>The neighbor array must remain valid until the next callback or compute completes</li><li>Indices should match your simulator&apos;s numbering (KIM handles conversions)</li></ul><h3 id="implementation-examples">Implementation Examples</h3><p>Here is a very dummy examples to hammer the point home of how neighbor list callback works with all the different kind of neighbor lists and simulator strategies</p><h4 id="strategy-1-pre-computed-lists-simple-but-memory-intensive-eg-lammps">Strategy 1: Pre-computed Lists (Simple but Memory Intensive, e.g. LAMMPS)</h4><pre><code class="language-c">typedef struct {
+    int** all_neighbors;      // neighbors[particle][neighbor_idx]
+    int* num_neighbors;       // count for each particle
+    double cutoff;
+} PrecomputedList;
+
+typedef struct {
+    PrecomputedList* lists;   // Array of lists for different cutoffs
+    int num_lists;
+} SimulatorData;
+
+int get_neighbors_precomputed(void* data_object, ..., int neighbor_list_index,
+                             int particle_index, int* number_of_neighbors,
+                             int** neighbors_ptr) {
+    SimulatorData* sim = (SimulatorData*)data_object;
+    PrecomputedList* list = &amp;sim-&gt;lists[neighbor_list_index];
+    
+    *number_of_neighbors = list-&gt;num_neighbors[particle_index];
+    *neighbors_ptr = list-&gt;all_neighbors[particle_index];
+    return 0;
+}
+</code></pre><h4 id="strategy-2-on-demand-computation-memory-efficient-eg-ase-kimpy">Strategy 2: On-Demand Computation (Memory Efficient, e.g. ASE, KIMPY)</h4><pre><code class="language-c">typedef struct {
+    double* positions;        // Particle positions
+    int num_particles;
+    double* box;             // Simulation box
+    int* temp_neighbors;     // Reusable buffer
+    CellList* cell_list;     // Spatial data structure
+} SimulatorData;
+
+int get_neighbors_on_demand(void* data_object, ..., int neighbor_list_index,
+                           int particle_index, int* number_of_neighbors,
+                           int** neighbors_ptr) {
+    SimulatorData* sim = (SimulatorData*)data_object;
+    double cutoff = cutoffs[neighbor_list_index];
+    
+    // Use cell list to find neighbors efficiently
+    int count = 0;
+    double* pos_i = &amp;sim-&gt;positions[3 * particle_index];
+    
+    // Iterate through nearby cells
+    CellIterator iter = cell_list_get_iterator(sim-&gt;cell_list, pos_i, cutoff);
+    while (cell_iterator_has_next(&amp;iter)) {
+        int j = cell_iterator_next(&amp;iter);
+        double* pos_j = &amp;sim-&gt;positions[3 * j];
+        
+        double dist_sq = distance_squared(pos_i, pos_j, sim-&gt;box);
+        if (dist_sq &lt;= cutoff * cutoff) {
+            sim-&gt;temp_neighbors[count++] = j;
+        }
+    }
+    
+    *number_of_neighbors = count;
+    *neighbors_ptr = sim-&gt;temp_neighbors;
+    return 0;
+}
+</code></pre><h4 id="strategy-3-closure-based-functional-languages-as-it-is-implemented-in-julia-right-now">Strategy 3: Closure-Based (Functional Languages, as it is implemented in Julia right now)</h4><p>For languages with first-class functions, you can use closures to capture the neighbor list logic:</p><pre><code class="language-julia"># Julia example
+struct NeighborClosure
+    get_neighbors::Function
+    storage::Vector{Vector{Int32}}  # Persistent storage
+end
+
+function create_neighbor_closure(positions, box, pbc)
+    # Create spatial data structure
+    cell_list = CellList(positions, box, max_cutoff)
+    
+    function get_neighbors(particle_idx, cutoff)
+        neighbors = Int32[]
+        # Find neighbors using cell_list
+        for j in nearby_particles(cell_list, particle_idx, cutoff)
+            if distance(positions[particle_idx], positions[j]) &lt;= cutoff
+                push!(neighbors, j)
+            end
+        end
+        return neighbors
+    end
+    
+    return get_neighbors
+end
+</code></pre><h3 id="critical-implementation-details">Critical Implementation Details</h3><h4 id="memory-persistence">Memory Persistence</h4><p><strong>The Golden Rule</strong>: Neighbor data must remain valid after your callback returns!</p><pre><code class="language-c">// WRONG - Array on stack will be invalid after return
+int get_neighbors_bad(void* data_object, ...) {
+    int local_neighbors[1000];  // Stack allocated!
+    // ... fill local_neighbors ...
+    *neighbors_ptr = local_neighbors;  // BUG: Dangling pointer!
+    return 0;
+}
+
+// CORRECT - Use persistent storage
+typedef struct {
+    int* neighbor_buffer;  // Heap allocated
+    size_t buffer_size;
+} SimData;
+
+int get_neighbors_good(void* data_object, ...) {
+    SimData* sim = (SimData*)data_object;
+    // ... fill sim-&gt;neighbor_buffer ...
+    *neighbors_ptr = sim-&gt;neighbor_buffer;  // Safe: buffer persists
+    return 0;
+}
+</code></pre><h4 id="handling-multiple-neighbor-lists">Handling Multiple Neighbor Lists</h4><p>Models may need different cutoffs for different interaction ranges:</p><pre><code class="language-c">typedef struct {
+    int* storage_list0;
+    int* storage_list1;
+    int* storage_list2;
+    size_t max_neighbors;
+} MultiListData;
+
+int get_neighbors_multi(void* data_object, ..., int neighbor_list_index, ...) {
+    MultiListData* data = (MultiListData*)data_object;
+    int* storage;
+    
+    // Select appropriate storage for this list
+    switch (neighbor_list_index) {
+        case 0: storage = data-&gt;storage_list0; break;
+        case 1: storage = data-&gt;storage_list1; break;
+        case 2: storage = data-&gt;storage_list2; break;
+        default: return 1;  // Error: invalid index
+    }
+    
+    // Fill storage with neighbors for requested cutoff
+    double cutoff = cutoffs[neighbor_list_index];
+    // ... neighbor finding logic ...
+    
+    *neighbors_ptr = storage;
+    return 0;
+}
+</code></pre><h4 id="index-conversions-and-ghost-particles">Index Conversions and Ghost Particles</h4><p>KIM-API is a language agnostic implementation, so it works with both 0-based and 1-based implementations. To make it easier for you, you need to select the correct numbering when you initialize the model, but still three of the most common frustration of interfacing C/C++ with Julia/Fortran are i) row vs col major ordering, ii) off by one errors!</p><p>So you need to be consistent:</p><pre><code class="language-c">// If your simulator uses 1-based indexing internally
+int get_neighbors_fortran_style(void* data_object, ..., 
+                               int particle_index, ...) {
+    // KIM might pass 0-based or 1-based depending on model
+    // Your callback should use YOUR numbering consistently
+    
+    MySimulator* sim = (MySimulator*)data_object;
+    // If KIM is configured for 0-based but you use 1-based:
+    int my_index = particle_index + 1;  // Convert if needed
+    
+    // Get neighbors using your indexing
+    int count = sim-&gt;get_neighbor_count(my_index);
+    int* my_neighbors = sim-&gt;get_neighbor_list(my_index);
+    
+    // Return in your numbering - KIM handles conversions
+    *number_of_neighbors = count;
+    *neighbors_ptr = my_neighbors;
+    return 0;
+}
+</code></pre><h3 id="common-pitfalls-and-solutions">Common Pitfalls and Solutions</h3><p><strong>Pitfall 1: Returning Local Arrays</strong></p><pre><code class="language-c">// Problem: Stack allocation
+int neighbors[100];
+*neighbors_ptr = neighbors;  // Undefined behavior!
+
+// Solution: Use persistent storage in data_object
+</code></pre><p><strong>Pitfall 2: Not Handling Multiple Cutoffs</strong></p><pre><code class="language-c">// Problem: Assuming single cutoff
+double global_cutoff = 5.0;  // Ignoring cutoffs array!
+
+// Solution: Use the provided cutoff
+double cutoff = cutoffs[neighbor_list_index];
+</code></pre><p>Phew! that was long, now for the remainder of easy stuff.</p><h2 id="step-6-species-mapping">Step 6: Species Mapping</h2><p>KIM-API uses integer codes for species. You need to map your element symbols to KIM codes:</p><h3 id="c-function-kimmodelgetspeciessupportandcode">C Function: <code>KIM_Model_GetSpeciesSupportAndCode</code></h3><pre><code class="language-c">int KIM_Model_GetSpeciesSupportAndCode(
+    void* model,
+    const char* species_name,  // e.g., &quot;Si&quot;, &quot;Fe&quot;, &quot;O&quot;
+    int* species_code
+);
+</code></pre><p>Convert your species array to integer codes before computation.</p><h2 id="step-7-computing-properties">Step 7: Computing Properties</h2><p>With everything set up, let it compute the properties,</p><h3 id="c-function-kimmodelcompute">C Function: <code>KIM_Model_Compute</code></h3><pre><code class="language-c">int KIM_Model_Compute(
+    void* model,
+    void* compute_arguments
+);
+</code></pre><p>After this call, your output arrays (energy, forces) will be populated with computed values.</p><h2 id="step-8-cleanup">Step 8: Cleanup</h2><p>Don&apos;t forget to clean up allocated resources:</p><pre><code class="language-c">int KIM_Model_ComputeArgumentsDestroy(
+    void* model,
+    void** compute_arguments
+);
+
+void KIM_Model_Destroy(
+    void** model
+);
+</code></pre><h2 id="complete-workflow-example">Complete Workflow Example</h2><p>To revise:</p><pre><code>1. Create model with desired units
+2. Create compute arguments
+3. Check what properties the model supports
+4. Generate neighbor lists based on model&apos;s cutoff
+5. Map species names to KIM codes
+6. Set all required pointers:
+   - Number of particles
+   - Species codes
+   - Positions
+   - Contributing flags
+   - Output arrays (energy, forces)
+7. Set neighbor list callback
+8. Call compute
+9. Read results from output arrays
+10. Clean up resources
+</code></pre><h3 id="minor-points-to-remember">Minor points to remember</h3><p>For periodic systems:</p><ol><li>Create ghost atoms for particles near boundaries</li><li>Include ghosts in position and species arrays</li><li>Set contributing flag: 1 for real atoms, 0 for ghosts</li><li>Ensure neighbor lists include appropriate ghost atoms</li></ol><p>Always check return codes:</p><ul><li>0 indicates success</li><li>Non-zero indicates an error</li><li>Use KIM&apos;s logging functions for debugging</li></ul><h2 id="a-note-on-the-julia-implementation">A Note on the Julia Implementation</h2><p>For those interested in seeing these concepts in action, I&apos;ve developed <a href="https://github.com/ipcamit/kim_api.jl">kim_api.jl</a>, a Julia package that wraps KIM-API functionality. Julia&apos;s excellent C interoperability through <code>ccall</code> makes it particularly straightforward to interface with KIM-API&apos;s C functions. The package demonstrates:</p><ul><li>Clean abstraction over C pointers and memory management</li><li>Type-safe species mapping</li><li>Automatic neighbor list generation</li><li>High-level interface that hides complexity while maintaining performance</li></ul><p>The Julia implementation serves as both a practical tool and a reference for understanding KIM-API integration. Its readable syntax and direct mapping to C functions make it an excellent learning resource for developers working in any language.</p><p>Hope this was fun read! By following the patterns outlined in this tutorial and adapting them to your specific language and architecture, you can add robust KIM-API support to any molecular simulation code.</p><h2 id="resources">Resources</h2><ul><li><a href="https://kim-api.readthedocs.io">KIM-API Documentation</a></li><li><a href="https://openkim.org">OpenKIM Model Repository</a></li><li><a href="https://github.com/openkim">Example Implementations</a></li><li><a href="https://github.com/ipcamit/kim_api.jl">kim_api.jl Julia Package</a> - Reference implementation demonstrating the concepts in this tutorial (still under development)</li><li><a href="https://github.com/openkim/kimpy">KIMPY</a></li></ul>]]></content:encoded></item><item><title><![CDATA[KIM-API Model Drivers from scratch I: using C++]]></title><description><![CDATA[<h2 id="introduction">Introduction</h2><blockquote>This is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: <a href="https://github.com/ipcamit/kim-api-tutorial">https://github.com/ipcamit/kim-api-tutorial</a> .</blockquote><p>Have you ever wanted to</p>]]></description><link>https://ipcamit.github.io/kim-api-model-drivers-from-scratch-i-using-c/</link><guid isPermaLink="false">6890c4e22776ea6df2690e30</guid><dc:creator><![CDATA[Amit Gupta]]></dc:creator><pubDate>Mon, 04 Aug 2025 14:36:11 GMT</pubDate><content:encoded><![CDATA[<h2 id="introduction">Introduction</h2><blockquote>This is supposed to be a two/three part series on how to write OpenKIM model driver using C++, C and Fortran (Fortran if I ever got to use it!). Majority of codes/slides etc can be accessed here: <a href="https://github.com/ipcamit/kim-api-tutorial">https://github.com/ipcamit/kim-api-tutorial</a> .</blockquote><p>Have you ever wanted to create portable interatomic potentials that work seamlessly across different molecular dynamics simulators? The Knowledgebase of Interatomic Models (KIM) API makes this possible, but diving into model driver development can feel overwhelming, especially if you&apos;re not deeply familiar with C++.</p><p>This guide takes you from the fundamental C++ concepts you&apos;ll encounter in KIM-API code all the way to understanding a complete Lennard-Jones model driver implementation. Think of this as a friendly companion that demystifies the technical aspects while giving you practical insights into how everything fits together.</p><h2 id="why-kim-api">Why KIM-API?</h2><p>Before we dive into the code, let&apos;s understand what problem KIM-API solves. Traditionally, if you developed an interatomic potential, you&apos;d need to implement it separately for each simulator (LAMMPS, ASE, DL_POLY, etc.). KIM-API provides a standardized interface that allows you to write your potential once and have it work everywhere. The magic happens through a combination of smart API design and some C++ techniques we&apos;ll explore together.</p><p>What makes KIM-API particularly impressive is its multi-language support. While we&apos;re focusing on C++ in this tutorial, the same model can be called from simulators written in C, Fortran, Python, or other languages (The model driver in C post is coming out &quot;soon&quot; !). This language-agnostic design influences many of the technical choices we&apos;ll see, from the use of <code>extern &quot;C&quot;</code> linkage to the way functions are registered through pointers.</p><h2 id="prerequisites-and-setup">Prerequisites and Setup</h2><p>To follow along with this tutorial, you&apos;ll need:</p><ul><li>A Unix-like environment (preferably Linux)</li><li>A C++ compiler (g++)</li><li>CMake</li><li>Basic familiarity with C/C++ programming</li><li>(Recommended) VS Code with remote development extensions</li></ul><p>For the easiest setup, you can use the KIM Developer Platform Docker container:</p><pre><code class="language-bash"># Pull the Docker image
 docker pull ghcr.io/openkim/developer-platform:latest-minimal
 
 # Run the container
